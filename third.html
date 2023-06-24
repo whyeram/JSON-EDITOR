@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>JSON Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+
+    <h3>JSON DATA FILE</h3>
+    <style>    
+
+        /* body {
+            font-family: Serif, monospace;
+            background-color: rgb(230, 232, 238);
+            flex-wrap: wrap;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+           
+        }
+
+        h3 {
+            padding: 20px;
+            color: rgb(34, 48, 25);
+        }
+
+        .container {
+            padding: 10px;
+            display: flex;
+            
+            align-items: center;
+            justify-content: center; 
+        }
+
+        .key-input {
+            width: 200px;
+            height: 30px;
+            border-radius: 0;
+            margin-left: 10px;
+        }
+
+        .value-input {
+            width: 600px;
+            height: 30px;
+            font-family: Serif, monospace;
+            resize: vertical;
+            border-radius: 0;
+        }
+
+        .error {
+            color: rgb(233, 9, 9);
+        }
+
+        .new-container {
+            border: 1px solid #0a0909;
+            background-color: #f7f3f3;
+        }
+
+        .nested-container {
+            margin-left: 100px;
+        }
+
+        .save-button,
+        .add-button {
+            border: #0a0909;
+            cursor: pointer;
+            margin: 5px;
+            background-color: rgb(57, 83, 41);
+            color: rgb(250, 253, 252);
+        }
+        .add-button{
+            background-color: rgb(113, 73, 20);
+        }
+        .save-button{
+            width: 180px;
+            font-size: 20px;
+        }
+
+        .btn:hover {
+            background-color: #715c40;
+        }
+
+        .save-message {
+            margin-top: 10px;
+        }
+
+        */
+        .fa-solid{
+            color: black;
+            padding: 5px;
+        } 
+        
+    </style>
+
+</head>
+
+<body>
+    <form action="" id="json-form">
+    <div id="json-container"></div>
+    
+    <button id="add-button" class="btn add-button">Add a key:value pair</button>
+    <button id="save-button" class="btn save-button">Save Changes</button>
+    <p id="save-message" class="error"></p>
+</form>
+    <script>
+
+        var jsonData;
+        fetch('/json')
+            .then(response => response.json())
+            .then(data => {
+                console.log("DATA RECEIVED ON CLIENT END!!....", data);
+                jsonData = data;
+                renderJsonData(jsonData, document.getElementById('json-container'));
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+
+        // Add event listener to the save button
+        var saveButton = document.getElementById('save-button');
+        saveButton.addEventListener('click', saveChanges);
+
+        function renderJsonData(data, container) {
+            container.innerHTML = ''; // Clear the container before rendering
+
+            Object.entries(data).forEach(([key, value]) => {
+
+
+                var div = document.createElement('div');
+                div.className = 'json-container container';
+
+                var keyInput = document.createElement('input');
+                keyInput.className = 'form-control key-input';
+                keyInput.value = key;
+
+                var valueInput = document.createElement('input');
+                valueInput.className = 'form-control value-input';
+                valueInput.value = JSON.stringify(value, null, 2);
+
+                var deleteButton = document.createElement('i');
+                deleteButton.innerHTML = '<i class="fa-solid fa-minus"></i>';
+                deleteButton.addEventListener('click', function () {
+                    deleteKey(data, key);
+                });
+
+                var addButton = document.createElement('i');
+                addButton.innerHTML = '<i class="fa-solid fa-plus"></i>';
+                addButton.addEventListener('click', function () {
+                    addKeyValuePair(data, key, value, div);
+                });
+
+
+                div.appendChild(keyInput);
+                
+                div.appendChild(deleteButton);
+                if (typeof value === 'object' && value !== null) {
+                    div.appendChild(addButton);
+                }
+                div.appendChild(valueInput);
+                container.appendChild(div);
+
+                // Render nested objects or arrays in separate containers
+                if (typeof value === 'object' && value !== null) {
+
+                    var nestedContainer = document.createElement('div');
+                    nestedContainer.className = 'nested-container';
+                    container.appendChild(nestedContainer);
+                    renderJsonData(value, nestedContainer);
+                }
+
+            });
+        }
+
+        // Function to delete a key from the JSON data
+        function deleteKey(data, key) {
+            delete data[key];
+            renderJsonData(jsonData, document.getElementById('json-container'));
+        }
+
+
+        function addKeyValuePair(data, parentKey, value, container) {
+            console.log(parentKey);
+            console.log(value);
+            var isNested = false;
+            var newContainer = document.createElement('div');
+            newContainer.className = 'json-container new-container';
+            if (typeof data[parentKey] === 'object' && !Array.isArray(data[parentKey])) {
+                var keyInput = document.createElement('input');   //key:value pair will be added for nested object type which is non-array
+                keyInput.className = 'key-input';
+                keyInput.placeholder = 'Key';
+                isNested = true;
+            }
+            var valueInput = document.createElement('input');
+            valueInput.className = 'value-input';
+            valueInput.placeholder = 'Value';
+
+            var addButton = document.createElement('button');
+            addButton.textContent = 'Add';
+            addButton.addEventListener('click', function () {
+                if (isNested) {
+                    var newKey = keyInput.value;
+                }
+                var newValue = valueInput.value;
+                try {
+                    if (isNested) {
+                        if (typeof data[parentKey][newKey] === 'undefined') {
+                            // If the key doesn't exist, add the value
+                            console.log("Inside if ");
+                            data[parentKey][newKey] = newValue;
+                        } else if (Array.isArray(data[newKey])) {
+                            // If the key already exists and its value is an array, append the new value
+                            data[parentKey][newKey].push(newValue);
+                        } else {
+                            // If the key already exists but its value is not an array, convert it to an array and add the new value
+                            data[parentKey][newKey] = [data[parentKey][newKey], newValue];
+                        }
+                    }
+                    else {
+                        if (Array.isArray(data[parentKey])) {
+                            // If the key already exists and its value is an array, append the new value
+                            data[parentKey].push(newValue);
+                        } else {
+                            console.log("not array");
+                            // If the key already exists but its value is not an array, convert it to an array and add the new value
+                            data[parentKey] = [data[parentKey], newValue];
+                        }
+                    }
+
+                    renderJsonData(jsonData, document.getElementById('json-container'));
+                } catch (error) {
+                    console.error('Invalid JSON value:', newValue);
+                }
+            });
+
+            var cancelButton = document.createElement('button');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.addEventListener('click', function () {
+                container.removeChild(newContainer);
+                saveButton.disabled = false;
+            });
+            if (isNested) {
+                newContainer.appendChild(keyInput);
+
+            }
+            newContainer.appendChild(valueInput);
+            newContainer.appendChild(addButton);
+            newContainer.appendChild(cancelButton);
+            container.appendChild(newContainer);
+        }
+        // Add event listener to the "Add New" button
+        var addNewButton = document.getElementById('add-button');
+        addNewButton.addEventListener('click', addNewKeyValuePair);
+
+        // Function to add a new key-value pair
+        function addNewKeyValuePair() {
+            var newContainer = document.createElement('div');
+            newContainer.className = 'json-container new-container';
+
+            var keyInput = document.createElement('input');   //key:value pair will be added for nested object type which is non-array
+            keyInput.className = 'key-input';
+            keyInput.placeholder = 'Key';
+            var newKey = keyInput.value;
+
+            var valueInput = document.createElement('input');
+            valueInput.className = 'value-input';
+            valueInput.placeholder = 'Value';
+            var newValue = valueInput.value;
+
+            try {
+                jsonData[newKey] = newValue;
+                renderJsonData(jsonData, document.getElementById('json-container'));
+            } catch (error) {
+                console.error('Invalid JSON value:', newValue);
+            }
+        }
+
+
+        function saveChanges() {
+            var jsonContainers = document.getElementsByClassName('json-container');
+            var saveMessage = document.getElementById('save-message');
+            var updatedData = {};
+
+            for (var i = 0; i < jsonContainers.length; i++) {
+                var keyInput = jsonContainers[i].getElementsByClassName('key-input')[0];
+                var valueInput = jsonContainers[i].getElementsByClassName('value-input')[0];
+                var key = keyInput.value;
+                var value = valueInput.value;
+                console.log(value);
+                try {
+                    value = JSON.parse(value);
+                    updatedData[key] = value;
+                } catch (error) {
+                    saveMessage.textContent = 'Invalid JSON value: ' + value;
+                    return;
+                }
+            }
+
+            // Capture new key-value pairs added by the user
+            var newContainers = document.getElementsByClassName('new-container');
+            for (var j = 0; j < newContainers.length; j++) {
+                var newKeyInput = newContainers[j].getElementsByClassName('key-input')[0];
+                var newValueInput = newContainers[j].getElementsByClassName('value-input')[0];
+                var newKey = newKeyInput.value;
+                var newValue = newValueInput.value;
+
+                try {
+                    newValue = JSON.parse(newValue);
+                    updatedData[newKey] = newValue;
+                } catch (error) {
+                    saveMessage.textContent = 'Invalid JSON value: ' + newValue;
+                    return;
+                }
+            }
+
+            // Update the jsonData variable with the new data
+            jsonData = updatedData;
+
+            // Clear the save message
+            saveMessage.textContent = '';
+
+            // Perform any additional actions with the updated JSON data
+            console.log('Changes saved:', jsonData);
+        }
+
+    </script>
+  
+</body>
+
+</html>
